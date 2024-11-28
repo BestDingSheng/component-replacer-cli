@@ -18,7 +18,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "prepare": "husky install",
     "semantic-release": "semantic-release",
-    "publish": "npm run build && npm uninstall -g component-replacer-cli && npm install -g ."
+    "dev:build": "npm run build && npm uninstall -g component-replacer-cli && npm install -g ."
   },
   "dependencies": {
     "@babel/generator": "^7.21.5",
