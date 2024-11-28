@@ -6,6 +6,10 @@
   "bin": {
     "component-replacer-cli": "./dist/index.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BestDingSheng/component-replacer-cli.git"
+  },
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
@@ -45,6 +49,9 @@
       "pre-commit": "npm run lint && npm run format",
       "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
     }
+  },
+  "release": {
+    "branches": ["main"]
   }
 }
 
