@@ -49,7 +49,3 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: npx semantic-release
-      permissions:
-        contents: write
-        issues: write
-        pull-requests: write
