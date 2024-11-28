@@ -25,11 +25,12 @@
     "@babel/parser": "^7.21.5",
     "@babel/traverse": "^7.21.5",
     "@babel/types": "^7.21.5",
+    "chalk": "^4.1.2",
     "commander": "^9.5.0",
-    "prettier": "^2.8.8",
-    "chalk": "^4.1.2"
+    "prettier": "^2.8.8"
   },
   "devDependencies": {
+    "@semantic-release/git": "^10.0.1",
     "@types/babel__generator": "^7.6.4",
     "@types/babel__traverse": "^7.18.5",
     "@types/jest": "^29.5.1",
@@ -51,16 +52,40 @@
     }
   },
   "release": {
-    "branches": ["main"],
+    "branches": [
+      "main"
+    ],
     "plugins": [
       "@semantic-release/commit-analyzer",
       "@semantic-release/release-notes-generator",
-      "@semantic-release/npm",
-      "@semantic-release/github"
-    ]
+      [
+        "@semantic-release/npm",
+        {
+          "pkgRoot": "."
+        }
+      ],
+      [
+        "@semantic-release/github",
+        {
+          "assets": [
+            "dist/**"
+          ]
+        }
+      ],
+      [
+        "@semantic-release/git",
+        {
+          "assets": [
+            "package.json",
+            "README.md"
+          ],
+          "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+        }
+      ]
+    ],
+    "preset": "angular"
   },
   "publishConfig": {
     "access": "public"
   }
 }
-
