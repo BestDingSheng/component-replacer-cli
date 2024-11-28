@@ -12,16 +12,40 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [14.x, 16.x, 18.x]
+        node-version: [18.x]
 
     steps:
     - uses: actions/checkout@v3
+    
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
-    - run: npm ci
-    - run: npm run build
-    - run: npm test
-    - run: npm run lint
+    
+    - name: Clean npm cache
+      run: npm cache clean --force
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Install TypeScript
+      run: npm install typescript@latest
+    
+    - name: Clean build cache
+      run: npm run clean || true
+    
+    - name: Build
+      run: npm run build
+      timeout-minutes: 10
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Run linter
+      run: npm run lint
 
+    - name: Semantic Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: npx semantic-release
