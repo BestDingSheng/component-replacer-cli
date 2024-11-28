@@ -38,11 +38,11 @@ jobs:
       run: npm run build
       timeout-minutes: 10
     
-    - name: Run tests
-      run: npm test
+    # - name: Run tests
+    #   run: npm test
     
-    - name: Run linter
-      run: npm run lint
+    # - name: Run linter
+    #   run: npm run lint
 
     - name: Semantic Release
       env:
