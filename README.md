@@ -39,3 +39,4 @@ component-replacer-cli ./src
 ```
 component-replacer-cli ./index.tsx
 ```
+
