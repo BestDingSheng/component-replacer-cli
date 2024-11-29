@@ -46,25 +46,19 @@ const componentReplaceRules = [
     { from: { name: 'Input' }, to: 'InputOutLineExt', importFrom: '@m-tools/antd-ext' },
     { from: { name: 'Select' }, to: 'SelectOutLineExt', importFrom: '@m-tools/antd-ext' },
     { from: { name: 'DatePickerExt', property: 'RangePicker' }, to: 'RangePickerOutLineExt', importFrom: '@m-tools/antd-ext' },
+    { from: { name: 'EnumSelect' }, to: 'EnumSelect', importFrom: '@/BaseComponents' },
 ];
 async function replaceAndFormatComponents(code) {
     const ast = (0, parser_1.parse)(code, {
         sourceType: 'module',
         plugins: ['jsx', 'typescript'],
     });
-    const usedComponents = new Set();
-    let antdExtImport;
-    let antdExtTypeImport;
+    const usedComponents = new Map();
     let hasReplacement = false;
     (0, traverse_1.default)(ast, {
         ImportDeclaration(path) {
             if (path.node.source.value === '@m-tools/antd-ext') {
-                if (path.node.importKind === 'type') {
-                    antdExtTypeImport = path;
-                }
-                else {
-                    antdExtImport = path;
-                }
+                // We no longer need to track these separately
             }
         },
         JSXElement(path) {
@@ -86,16 +80,17 @@ async function replaceAndFormatComponents(code) {
                     });
                     if (rule) {
                         hasReplacement = true;
-                        usedComponents.add(rule.to);
+                        usedComponents.set(rule.to, rule.importFrom);
                         const attributes = openingElement.attributes;
+                        const labelAttr = attributes.find(attr => t.isJSXIdentifier(attr.name, { name: 'label' }));
                         const newAttributes = attributes.filter(attr => !t.isJSXIdentifier(attr.name, { name: 'label' }));
                         const nameAttr = newAttributes.find(attr => t.isJSXIdentifier(attr.name, { name: 'name' }));
                         childElement.openingElement.name = t.jsxIdentifier(rule.to);
                         if (childElement.closingElement) {
                             childElement.closingElement.name = t.jsxIdentifier(rule.to);
                         }
-                        if (nameAttr) {
-                            childElement.openingElement.attributes.push(t.jsxAttribute(t.jsxIdentifier('label'), nameAttr.value));
+                        if (labelAttr && t.isJSXAttribute(labelAttr) && labelAttr.value) {
+                            childElement.openingElement.attributes.push(t.jsxAttribute(t.jsxIdentifier('label'), labelAttr.value));
                         }
                         openingElement.name = t.jsxMemberExpression(t.jsxIdentifier('Form'), t.jsxIdentifier('Item'));
                         openingElement.attributes = newAttributes;
@@ -108,38 +103,40 @@ async function replaceAndFormatComponents(code) {
             }
         },
     });
-    if (antdExtImport && t.isImportDeclaration(antdExtImport.node)) {
-        const existingSpecifiers = antdExtImport.node.specifiers
-            .filter((specifier) => t.isImportSpecifier(specifier))
-            .map(specifier => {
-            if (t.isIdentifier(specifier.imported)) {
-                return specifier.imported.name;
-            }
-            else if (t.isStringLiteral(specifier.imported)) {
-                return specifier.imported.value;
-            }
-            return '';
-        })
-            .filter(Boolean);
-        // 只添加新的组件到导入语句中
-        usedComponents.forEach(component => {
-            if (!existingSpecifiers.includes(component)) {
-                if (antdExtImport && antdExtImport.node) { // Add this null check
-                    antdExtImport.node.specifiers.push(t.importSpecifier(t.identifier(component), t.identifier(component)));
+    const importGroups = new Map();
+    usedComponents.forEach((importFrom, component) => {
+        if (!importGroups.has(importFrom)) {
+            importGroups.set(importFrom, new Set());
+        }
+        importGroups.get(importFrom).add(component);
+    });
+    importGroups.forEach((components, importFrom) => {
+        const existingImport = ast.program.body.find((node) => t.isImportDeclaration(node) && node.source.value === importFrom);
+        if (existingImport) {
+            const existingSpecifiers = existingImport.specifiers
+                .filter((specifier) => t.isImportSpecifier(specifier))
+                .map(specifier => {
+                if (t.isIdentifier(specifier.imported)) {
+                    return specifier.imported.name;
                 }
-            }
-        });
-    }
-    else if (usedComponents.size > 0) {
-        // 如果没有现有的 @m-tools/antd-ext 导入，创建一个新的
-        const newSpecifiers = Array.from(usedComponents).map(component => t.importSpecifier(t.identifier(component), t.identifier(component)));
-        const newImport = t.importDeclaration(newSpecifiers, t.stringLiteral('@m-tools/antd-ext'));
-        ast.program.body.unshift(newImport);
-    }
-    // 保持类型导入不变
-    if (antdExtTypeImport && t.isImportDeclaration(antdExtTypeImport.node)) {
-        // 不做任何改变，保持类型导入原样
-    }
+                else if (t.isStringLiteral(specifier.imported)) {
+                    return specifier.imported.value;
+                }
+                return '';
+            })
+                .filter(Boolean);
+            components.forEach(component => {
+                if (!existingSpecifiers.includes(component)) {
+                    existingImport.specifiers.push(t.importSpecifier(t.identifier(component), t.identifier(component)));
+                }
+            });
+        }
+        else {
+            const newSpecifiers = Array.from(components).map(component => t.importSpecifier(t.identifier(component), t.identifier(component)));
+            const newImport = t.importDeclaration(newSpecifiers, t.stringLiteral(importFrom));
+            ast.program.body.unshift(newImport);
+        }
+    });
     if (hasReplacement) {
         const output = (0, generator_1.default)(ast, { retainLines: true, concise: false });
         const formattedCode = await prettier.format(output.code, {
